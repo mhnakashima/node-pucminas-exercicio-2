@@ -2,6 +2,15 @@ const express = require('express')
 const app = express()
 const port = 3000
 
+const knex = require('knex')({ 
+    client: 'pg', 
+    debug: true, 
+    connection: { 
+        connectionString : process.env.DATABASE_URL, 
+        ssl: { rejectUnauthorized: false }, 
+      } 
+}); 
+
 let apiRouter = express.Router()
 
 const endpoint = '/'
@@ -44,51 +53,87 @@ app.get(endpoint, function (req, res) {
 })
 
 app.get(endpoint + 'produtos', function (req, res) {
-    res.status(200).json(lista_produtos)
+    knex.select('*').from('produto') 
+    .then( produtos => res.status(200).json(produtos) ) 
+    .catch(err => { 
+        res.status(500).json({  
+           message: 'Erro ao recuperar produtos - ' + err.message }) 
+    })   
 })
 
 app.get(endpoint + 'produtos/:id', function (req, res) {
-    const product = lista_produtos.produtos.find(p => p.id == req.params.id)
-    if (!product) {
-        return res.status(404).json();
-    }
-    res.status(200).json(product)
+    knex.select('*').from('produto') 
+    .then( produtos => {
+        const product = produtos.produtos.find(p => p.id == req.params.id)
+
+        if (!product) {
+            return res.status(404).json();
+        }
+        res.status(200).json(product)
+    }) 
+    .catch(err => { 
+        res.status(500).json({  
+           message: 'Erro ao recuperar produtos - ' + err.message }) 
+    })   
 })
 
 app.put(endpoint + 'produtos/:id', function (req, res) {
-    const product = req.body;
-    const id = req.params.id;
+    knex.select('*').from('produto') 
+    .then( produtos => {
+        const product = req.body;
+        const id = req.params.id;
 
-    const old_product = lista_produtos.produtos.find(p => p.id == req.params.id)
-    const index = lista_produtos.produtos.indexOf(old_product);
+        const old_product = produtos.find(p => p.id == req.params.id)
+        const index = produtos.indexOf(old_product);
 
-    lista_produtos.produtos[index] = {
-        ...product,
-        id
-    };
+        produtos[index] = {
+            ...product,
+            id
+        };
 
-    res.status(200).json(product)
+        res.status(200).json(product)
+    }) 
+    .catch(err => { 
+        res.status(500).json({  
+           message: 'Erro ao atualizar produto - ' + err.message }) 
+    })
 })
 
 app.delete(endpoint + 'produtos/:id', function (req, res) {
-    const old_product = lista_produtos.produtos.find(p => p.id == req.params.id)
-    const index = lista_produtos.produtos.indexOf(old_product);
+    
+    knex.select('*').from('produto') 
+    .then( produtos => {
+        const old_product = produtos.find(p => p.id == req.params.id)
+        const index = produtos.indexOf(old_product);
 
-    if (index > -1) {
-        lista_produtos.produtos.splice(index, 1);
-    }
+        if (index > -1) {
+            produtos.splice(index, 1);
+        }
 
-    res.status(204).json()
+        res.status(204).json()
+    }) 
+    .catch(err => { 
+        res.status(500).json({  
+           message: 'Erro ao deletar produtos - ' + err.message }) 
+    })
 })
 
 app.post(endpoint + 'produtos', function (req, res) {
-    const product = req.body;
-    const id = lista_produtos.produtos.length + 1;
-    lista_produtos.produtos.push({
-        ...product,
-        id
-    });
-    res.status(200).json(lista_produtos)
+    knex.select('*').from('produto') 
+    .then( produtos => {
+        const product = req.body;
+        const id = produtos.length + 1;
+
+        produtos.push({
+            ...product,
+            id
+        });
+        res.status(200).json(lista_produtos)
+    }) 
+    .catch(err => { 
+        res.status(500).json({  
+           message: 'Erro ao cadastrar produto - ' + err.message }) 
+    })
 })
 
 app.listen(process.env.PORT || 3000, function () {
